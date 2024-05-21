@@ -34,8 +34,8 @@ btrfs-bind-snapshotter /run/containerd/containerd-btrfs-bind.sock /var/lib/conta
 
 If you have systemd, create this file.
 
-```toml
-#/lib/systemd/system/containerd-fuse-overlayfs.service
+```conf
+#/lib/systemd/system/containerd-btrfs-bind.service
 [Unit]
 Description=containerd-btrfs-bind
 PartOf=containerd.service
@@ -56,7 +56,7 @@ Do not forget enable the service now.
 
 ```shell
 systemctl daemon-reload
-systemctl enable --now containerd-fuse-overlayfs
+systemctl enable --now containerd-btrfs-bind
 ```
 
 Modify Containerd configuration.
