@@ -205,9 +205,9 @@ func (b *snapshotter) makeSnapshot(ctx context.Context, kind snapshots.Kind, key
 		}
 		parentp := filepath.Join(b.root, "snapshots", s.ParentIDs[0])
 
-		// btrfs subvolume snapshot /parent /subvol
-		readOnly := kind == snapshots.KindView
-		return btrfs.SubvolSnapshot(target, parentp, readOnly)
+		// delete readonly subvolume need CAP_SYS_ADMIN or user_subvol_rm_allowed
+		_ = kind == snapshots.KindView
+		return btrfs.SubvolSnapshot(target, parentp, false)
 	})
 
 	if err != nil {
@@ -268,7 +268,7 @@ func (b *snapshotter) Commit(ctx context.Context, name, key string, opts ...snap
 		source = filepath.Join(b.root, "active", id)
 		target = filepath.Join(b.root, "snapshots", id)
 
-		return btrfs.SubvolSnapshot(target, source, true)
+		return btrfs.SubvolSnapshot(target, source, false)
 	})
 
 	if err != nil {
@@ -318,8 +318,8 @@ func (b *snapshotter) Mounts(ctx context.Context, key string) (_ []mount.Mount, 
 // associated with the key will be removed.
 func (b *snapshotter) Remove(ctx context.Context, key string) (err error) {
 	var (
-		source, removed   string
-		readonly, restore bool
+		source, removed string
+		_, restore      bool
 	)
 
 	defer func() {
@@ -342,17 +342,17 @@ func (b *snapshotter) Remove(ctx context.Context, key string) (err error) {
 		case snapshots.KindView:
 			source = filepath.Join(b.root, "view", id)
 			removed = filepath.Join(b.root, "view", "rm-"+id)
-			readonly = true
+			_ = true
 		case snapshots.KindActive:
 			source = filepath.Join(b.root, "active", id)
 			removed = filepath.Join(b.root, "active", "rm-"+id)
 		case snapshots.KindCommitted:
 			source = filepath.Join(b.root, "snapshots", id)
 			removed = filepath.Join(b.root, "snapshots", "rm-"+id)
-			readonly = true
+			_ = true
 		}
 
-		if err = btrfs.SubvolSnapshot(removed, source, readonly); err != nil {
+		if err = btrfs.SubvolSnapshot(removed, source, false); err != nil {
 			removed = ""
 			return err
 		}
@@ -370,7 +370,7 @@ func (b *snapshotter) Remove(ctx context.Context, key string) (err error) {
 	if err != nil {
 		if restore { // means failed to commit transaction
 			// Attempt to restore source
-			if err1 := btrfs.SubvolSnapshot(source, removed, readonly); err1 != nil {
+			if err1 := btrfs.SubvolSnapshot(source, removed, false); err1 != nil {
 				log.G(ctx).WithFields(log.Fields{
 					"error":     err1,
 					"subvolume": source,
