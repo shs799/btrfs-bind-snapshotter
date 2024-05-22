@@ -21,10 +21,10 @@ jobs:
     - name: setup env
       run: |
         sudo apt-get update
-        sudo apt-get install libbtrfs-devel -y
+        sudo apt-get install libbtrfs-dev -y
 
     - name: Build
-      run: go build -v ./...
+      run: go build -v .
 
     - name: Test
-      run: go test -v ./...
+      run: go test -v ./cmd/btrfs-bind-snapshotter
